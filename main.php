@@ -78,23 +78,35 @@
         }
     }
 
-    function main($argv, $argc)
+    function main($argc, $argv)
     {
+        $file = [ "female_names", "male_names" ];
+
         if ($argc == 1)
         {
-            $fileNum = openFile("female_names");
-            $chain = rememberNames($fileNum);
-            calculateOccurences($chain);
-            $serializedChain = serialize($chain);
-            file_put_contents("serialized_names", $serializedChain);
+            $i = -1;
+            while (++$i < 2)
+            {
+                $fileNum = openFile($file[$i]);
+                $chain = rememberNames($fileNum);
+                calculateOccurences($chain);
+                $serializedChain = serialize($chain);
+                file_put_contents("serialized_" . $file[$i], $serializedChain);
+            }
         }
-        else if ($argc == 3 && $argv[1] === "f" && is_numeric($argv[2]))
+        else if ($argc == 3 && is_numeric($argv[2]))
         {
+            if ($argv[1] === "f")
+                $i = 0;
+            else if ($argv[1] === "m")
+                $i = 1;
+            else
+                return ;
             $count = (int)($argv[2]);
-            $chain = unserialize(file_get_contents("serialized_names"));
+            $chain = unserialize(file_get_contents("serialized_" . $file[$i]));
             while ($count-- > 0)
                 echo generateName($chain) . "\n";
         }
     }
 
-    main($argv, $argc);
+    main($argc, $argv);
