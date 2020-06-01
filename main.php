@@ -2,17 +2,20 @@
     function openFile($fileName)
     {
         $successOpenFile = fopen($fileName, "r");
-        if (!$successOpenFile)
+        if (!$successOpenFile) {
             exit("Error reading file $fileName\n");
+        }
         return ($successOpenFile);
     }
 
     function addToDictionary($letter, &$dictionary)
     {
-        if (array_key_exists($letter, $dictionary))
+        if (array_key_exists($letter, $dictionary)) {
             $dictionary[$letter] += 1;
-        else
+        }
+        else {
             $dictionary[$letter] = 1;
+        }
     }
 
     function rememberNames($fileNum)
@@ -20,24 +23,26 @@
         $letters;
 
         $letters["start"] = [];
-        while ($name = fgets($fileNum))
-        {
+        while ($name = fgets($fileNum)) {
             $name = mb_convert_encoding($name, 'Windows-1251', 'UTF-8');
             $i = -1;
             $name = strtolower(trim($name));
             $len = strlen($name);
             addToDictionary($name[0], $letters["start"]);
-            while (++$i < $len)
-            {
+            while (++$i < $len) {
                 $current = $name[$i];
-                if ($i == $len - 1)
+                if ($i == $len - 1) {
                     $next = "end";
-                else
+                }
+                else {
                     $next = $name[$i + 1];
-                if (array_key_exists($current, $letters))
+                }
+                if (array_key_exists($current, $letters)) {
                     addTodictionary($next, $letters[$current]);
-                else
+                }
+                else {
                     $letters[$current] = [ $next => 1 ];
+                }
             }
         }
         fclose($fileNum);
@@ -46,11 +51,11 @@
 
     function calculateOccurences(&$chain)
     {
-        foreach ($chain as $current => $allNext)
-        {
+        foreach ($chain as $current => $allNext) {
             $count = array_sum($chain[$current]);
-            foreach ($allNext as $letter => $frequence)
+            foreach ($allNext as $letter => $frequence) {
                 $chain[$current][$letter] = $frequence / $count;
+            }
         }
     }
 
@@ -59,18 +64,18 @@
         $name = "";
         $letter = "start";
 
-        while ($letter != "end")
-        {
+        while ($letter != "end") {
             $key = array_keys($chain[$letter]);
             $key = $key[rand(0, count($chain[$letter]) - 1)];
             $val = $chain[$letter][$key];
-            if (rand(0, 100) / 100 <= $val)
-            {
+            if (rand(0, 100) / 100 <= $val) {
                 $len = strlen($name);
-                if ($key === "end" && $len < 3)
+                if ($key === "end" && $len < 3) {
                     continue ;
-                if ($key === "end" || $len > 10)
+                }
+                if ($key === "end" || $len > 10) {
                     return $name;
+                }
                 $name = $name .
                     mb_convert_encoding($key, 'UTF-8', 'Windows-1251');
                 $letter = $key;
@@ -78,34 +83,43 @@
         }
     }
 
+    function generator(&$file, $argv)
+    {
+        if ($argv[1] === "f") {
+            $i = 0;
+        } elseif ($argv[1] === "m") {
+            $i = 1;
+        } else {
+            return ;
+        }
+        $count = (int)($argv[2]);
+        $chain = unserialize(file_get_contents("serialized_" . $file[$i]));
+        while ($count-- > 0) {
+            echo generateName($chain) . "\n";
+        }
+    }
+
+    function trainChain(&$file)
+    {
+        $i = -1;
+        while (++$i < 2) {
+            $fileNum = openFile($file[$i]);
+            $chain = rememberNames($fileNum);
+            calculateOccurences($chain);
+            $serializedChain = serialize($chain);
+            file_put_contents("serialized_" . $file[$i], $serializedChain);
+        }
+    }
+
     function main($argc, $argv)
     {
         $file = [ "female_names", "male_names" ];
 
-        if ($argc == 1)
-        {
-            $i = -1;
-            while (++$i < 2)
-            {
-                $fileNum = openFile($file[$i]);
-                $chain = rememberNames($fileNum);
-                calculateOccurences($chain);
-                $serializedChain = serialize($chain);
-                file_put_contents("serialized_" . $file[$i], $serializedChain);
-            }
+        if ($argc == 1) {
+            trainChain($file);
         }
-        else if ($argc == 3 && is_numeric($argv[2]))
-        {
-            if ($argv[1] === "f")
-                $i = 0;
-            else if ($argv[1] === "m")
-                $i = 1;
-            else
-                return ;
-            $count = (int)($argv[2]);
-            $chain = unserialize(file_get_contents("serialized_" . $file[$i]));
-            while ($count-- > 0)
-                echo generateName($chain) . "\n";
+        elseif ($argc == 3 && is_numeric($argv[2])) {
+            generator($file, $argv);
         }
     }
 
