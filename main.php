@@ -1,4 +1,9 @@
 <?php
+
+    /*
+    **  checking the file can be opened
+    */
+
     function openFile($fileName)
     {
         $successOpenFile = fopen($fileName, "r");
@@ -7,6 +12,10 @@
         }
         return ($successOpenFile);
     }
+
+    /*
+    **  adding new letter to chain
+    */
 
     function addToDictionary($letter, &$dictionary)
     {
@@ -18,6 +27,37 @@
         }
     }
 
+    /*
+    **  remembering letters from one name
+    */
+
+    function rememberOneName($name, &$letters)
+    {
+        $i = -1;
+        $len = strlen($name);
+
+        while (++$i < $len) {
+            $currentLetter = $name[$i];
+            if ($i == $len - 1) {
+                $nextLetter = "end";
+            }
+            else {
+                $nextLetter = $name[$i + 1];
+            }
+            if (array_key_exists($currentLetter, $letters)) {
+                addToDictionary($nextLetter, $letters[$currentLetter]);
+            }
+            else {
+                $letters[$currentLetter] = [ $nextLetter => 1 ];
+            }
+        }
+    }
+
+    /*
+    **  iterating through each name and remembering what letters
+    **  and how frequently stay after chosen letter
+    */
+
     function rememberNames($fileNum)
     {
         $letters;
@@ -25,29 +65,17 @@
         $letters["start"] = [];
         while ($name = fgets($fileNum)) {
             $name = mb_convert_encoding($name, 'Windows-1251', 'UTF-8');
-            $i = -1;
             $name = strtolower(trim($name));
-            $len = strlen($name);
             addToDictionary($name[0], $letters["start"]);
-            while (++$i < $len) {
-                $current = $name[$i];
-                if ($i == $len - 1) {
-                    $next = "end";
-                }
-                else {
-                    $next = $name[$i + 1];
-                }
-                if (array_key_exists($current, $letters)) {
-                    addTodictionary($next, $letters[$current]);
-                }
-                else {
-                    $letters[$current] = [ $next => 1 ];
-                }
-            }
+            rememberOneName($name, $letters);
         }
-        fclose($fileNum);
         return ($letters);
     }
+
+    /*
+    **  recalculating number of occurences to
+    **  frequency in range [0; 1]
+    */
 
     function calculateOccurences(&$chain)
     {
@@ -58,6 +86,10 @@
             }
         }
     }
+
+    /*
+    **  creating a sequence of letters
+    */
 
     function generateName($chain)
     {
@@ -83,6 +115,10 @@
         }
     }
 
+    /*
+    **  checking the serialized model exists and starting name generator
+    */
+
     function generator(&$file, $argv)
     {
         if ($argv[1] === "f") {
@@ -92,12 +128,21 @@
         } else {
             return ;
         }
+        $fileContent = @file_get_contents("serialized_" . $file[$i]);
+        if ($fileContent === FALSE) {
+            echo "error: serialized_" . $file[$i] . " file not found\n";
+            exit("type `php main.php` to train model\n");
+        }
         $count = (int)($argv[2]);
-        $chain = unserialize(file_get_contents("serialized_" . $file[$i]));
+        $chain = unserialize($fileContent);
         while ($count-- > 0) {
             echo generateName($chain) . "\n";
         }
     }
+
+    /*
+    **  opening file, training model, saving model
+    */
 
     function trainChain(&$file)
     {
@@ -105,6 +150,7 @@
         while (++$i < 2) {
             $fileNum = openFile($file[$i]);
             $chain = rememberNames($fileNum);
+            fclose($fileNum);
             calculateOccurences($chain);
             $serializedChain = serialize($chain);
             file_put_contents("serialized_" . $file[$i], $serializedChain);
@@ -117,9 +163,10 @@
 
         if ($argc == 1) {
             trainChain($file);
-        }
-        elseif ($argc == 3 && is_numeric($argv[2])) {
+        } elseif ($argc == 3 && is_numeric($argv[2])) {
             generator($file, $argv);
+        } else {
+            echo "usage: php main.php [f/m] [names number]\n";
         }
     }
 
